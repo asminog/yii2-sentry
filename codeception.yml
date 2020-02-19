@@ -8,9 +8,10 @@ paths:
 settings:
     colors: true
     memory_limit: 1024M
-#extensions:
-#    enabled:
-#        - Codeception\Extension\RunFailed
+coverage:
+    enabled: true
+    include:
+        - src/*
 modules:
     config:
         Yii2:
