@@ -1,0 +1,94 @@
+# [Sentry](https://sentry.io) logger for Yii2
+
+[![Build Status](https://travis-ci.org/asminog/yii2-sentry.svg)](https://travis-ci.org/asminog/yii2-sentry)
+[![Latest Stable Version](https://poser.pugx.org/asminog/yii2-sentry/v/stable)](https://packagist.org/packages/asminog/yii2-sentry) 
+[![Total Downloads](https://poser.pugx.org/asminog/yii2-sentry/downloads)](https://packagist.org/packages/asminog/yii2-sentry) 
+[![License](https://poser.pugx.org/asminog/yii2-sentry/license)](https://packagist.org/packages/asminog/yii2-sentry)
+
+## Installation
+
+```bash
+composer require asminog/yii2-sentry
+```
+
+Add target class in the application config:
+
+```php
+return [
+    'components' => [
+        'log' => [
+            'traceLevel' => YII_DEBUG ? 3 : 0,
+            'targets' => [
+                [
+                    'class' => 'asminog\yii2sentry\SentryTarget',
+                    'levels' => ['error', 'warning'],
+                    'dsn' => 'https://88e88888888888888eee888888eee8e8@sentry.io/1',
+//                    release option for project, default: null. Use "auto" to get it from git exec('git log --pretty="%H" -n1 HEAD')
+                    'release' => 'my-project-name@2.3.12',
+//                    Options for sentry client
+                    'options' => [],
+//                    Collect additional context from $_GLOBALS, default: ['_SESSION']. To switch off set false.
+                    /* @see https://docs.sentry.io/enriching-error-data/context/?platform=php#extra-context
+                    'collectContext' => ['_SERVER', '_COOKIE', '_SESSION'],
+                    // user attributes to collect, default: ['id', 'username', 'email']. To switch off set false.
+                    /* @see https://docs.sentry.io/enriching-error-data/context/?platform=php#capturing-the-user */
+                    'collectUserAttributes' => ['userId', 'userName', 'email'],
+                    // add something to extra using extraCallback, default: null
+                    'extraCallback' => function ($message, $extra) {
+                        $extra['YII_ENV'] = YII_ENV;
+                        return $extra;
+                    }
+                ],
+            ],
+        ],
+    ],
+];
+```
+
+## Usage
+
+Writing simple message:
+
+```php
+\Yii::error('message', 'category');
+```
+
+Writing messages with extra data:
+
+```php
+\Yii::warning([
+    'msg' => 'message',
+    'extra' => 'value',
+], 'category');
+```
+
+### Tags
+
+Writing messages with additional tags. If need to add additional tags for event, add `tags` key in message. Tags are various key/value pairs that get assigned to an event, and can later be used as a breakdown or quick access to finding related events.
+
+Example:
+
+```php
+\Yii::warning([
+    'msg' => 'message',
+    'extra' => 'value',
+    'tags' => [
+        'extraTagKey' => 'extraTagValue',
+    ]
+], 'category');
+```
+
+More about tags see https://docs.sentry.io/learn/context/#tagging-events
+
+## Log levels
+
+Yii2 log levels converts to Sentry levels:
+
+```
+\yii\log\Logger::LEVEL_ERROR => 'error',
+\yii\log\Logger::LEVEL_WARNING => 'warning',
+\yii\log\Logger::LEVEL_INFO => 'info',
+\yii\log\Logger::LEVEL_TRACE => 'debug',
+\yii\log\Logger::LEVEL_PROFILE_BEGIN => 'debug',
+\yii\log\Logger::LEVEL_PROFILE_END => 'debug',
+```

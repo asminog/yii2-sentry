@@ -1,0 +1,30 @@
+{
+  "name": "asminog/yii2-sentry",
+  "description": "Yii2 logger for Sentry",
+  "keywords": [
+    "logger",
+    "sentry",
+    "yii2"
+  ],
+  "type": "yii2-extension",
+  "license": "MIT",
+  "require": {
+    "php": "^7.1",
+    "yiisoft/yii2": "^2.0",
+    "sentry/sdk": "^2.1"
+  },
+  "require-dev": {
+    "codeception/codeception": "^3.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "asminog\\yii2sentry\\": "src"
+    }
+  },
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://asset-packagist.org"
+    }
+  ]
+}
