@@ -118,7 +118,7 @@ class SentryTarget extends Target
             }
 
 
-            if ($this->collectContext) {
+            if (! empty($this->collectContext)) {
                 $context = ArrayHelper::filter($GLOBALS, $this->collectContext);
                 foreach ($this->maskVars as $var) {
                     if (ArrayHelper::getValue($context, $var) !== null) {
@@ -156,9 +156,8 @@ class SentryTarget extends Target
      */
     private function setScopeUser()
     {
-        VarDumper::dump(Yii::$app);
         if (!Yii::$app->request->isConsoleRequest and $this->collectUserAttributes !== false) {
-            $attributes = ['id' => Yii::$app->user->getId()];
+            $attributes = ['id' => (Yii::$app->user ? Yii::$app->user->getId() : null)];
             if (($user = Yii::$app->user->identity) !== null) {
                 foreach ($this->collectUserAttributes as $collectUserAttribute) {
                     $attributes[$collectUserAttribute] = ArrayHelper::getValue($user, $collectUserAttribute);
