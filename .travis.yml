@@ -8,16 +8,15 @@ php:
 
 sudo: false
 
+# cache vendor dirs
 cache:
   directories:
     - $HOME/.composer/cache
 
 install:
-  - composer self-update && composer --version
-  - composer config -g github-oauth.github.com $GITHUB_AUTH_TOKEN
+  - travis_retry composer self-update && composer --version
   - export PATH="$HOME/.composer/vendor/bin:$PATH"
   - travis_retry composer install --prefer-dist --no-interaction
 
 script:
-  - composer exec codecept build -v
-  - composer exec codecept run -v
+  - vendor/bin/codecept run
