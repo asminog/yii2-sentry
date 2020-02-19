@@ -80,15 +80,6 @@ Example:
 
 More about tags see https://docs.sentry.io/learn/context/#tagging-events
 
-## Log levels
+## About
 
-Yii2 log levels converts to Sentry levels:
-
-```
-\yii\log\Logger::LEVEL_ERROR => 'error',
-\yii\log\Logger::LEVEL_WARNING => 'warning',
-\yii\log\Logger::LEVEL_INFO => 'info',
-\yii\log\Logger::LEVEL_TRACE => 'debug',
-\yii\log\Logger::LEVEL_PROFILE_BEGIN => 'debug',
-\yii\log\Logger::LEVEL_PROFILE_END => 'debug',
-```
+Inspired by [notamedia/yii2-sentry](https://github.com/notamedia/yii2-sentry)
