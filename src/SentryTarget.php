@@ -2,6 +2,7 @@
 
 namespace asminog\yii2sentry;
 
+use phpDocumentor\Reflection\Types\This;
 use Sentry\Severity;
 use Sentry\State\Scope;
 use \Throwable;
@@ -90,6 +91,7 @@ class SentryTarget extends Target
             $this->setScopeLevel($level);
             $this->setScopeUser();
             $this->setScopeTags(['category' => $category]);
+            $this->setExtraContext();
 
             if ($message instanceof Throwable) {
                 $this->setScopeExtras($this->runExtraCallback($message, []));
@@ -115,22 +117,6 @@ class SentryTarget extends Target
 
             if (!is_string($message)){
                 $message = VarDumper::dumpAsString($message);
-            }
-
-
-            if (! empty($this->collectContext)) {
-                $context = ArrayHelper::filter($GLOBALS, $this->collectContext);
-                foreach ($this->maskVars as $var) {
-                    if (ArrayHelper::getValue($context, $var) !== null) {
-                        ArrayHelper::setValue($context, $var, '***');
-                    }
-                }
-                $result = [];
-                foreach ($context as $key => $value) {
-                    $result[ltrim($key, '_')] = VarDumper::dumpAsString($value);
-                }
-
-                $this->setScopeExtras($result);
             }
 
             captureMessage($message);
@@ -245,5 +231,27 @@ class SentryTarget extends Target
                 return Severity::debug();
         }
         return Severity::fatal();
+    }
+
+    /**
+     * Add extra context if needed
+     */
+    private function setExtraContext()
+    {
+        if (! empty($this->collectContext)) {
+            $context = ArrayHelper::filter($GLOBALS, $this->collectContext);
+            foreach ($this->maskVars as $var) {
+                if (ArrayHelper::getValue($context, $var) !== null) {
+                    ArrayHelper::setValue($context, $var, '***');
+                }
+            }
+            $result = [];
+            foreach ($context as $key => $value) {
+                $result[ltrim($key, '_')] = VarDumper::dumpAsString($value);
+            }
+
+            $this->setScopeExtras($result);
+        }
+
     }
 }
