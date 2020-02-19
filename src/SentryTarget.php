@@ -156,7 +156,7 @@ class SentryTarget extends Target
      */
     private function setScopeUser()
     {
-        if (!Yii::$app->request->isConsoleRequest and $this->collectUserAttributes !== false) {
+        if (!Yii::$app->request->isConsoleRequest and ! empty($this->collectUserAttributes)) {
             $attributes = ['id' => (Yii::$app->user ? Yii::$app->user->getId() : null)];
             if (($user = Yii::$app->user->identity) !== null) {
                 foreach ($this->collectUserAttributes as $collectUserAttribute) {

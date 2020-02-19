@@ -3,9 +3,9 @@
 [![Latest Stable Version](https://img.shields.io/packagist/v/asminog/yii2-sentry.svg)](https://packagist.org/packages/asminog/yii2-sentry)
 [![Total Downloads](https://img.shields.io/packagist/dt/asminog/yii2-sentry.svg)](https://packagist.org/packages/asminog/yii2-sentry)
 [![Build Status](https://img.shields.io/travis/asminog/yii2-sentry.svg)](https://travis-ci.org/asminog/yii2-sentry)
-[![SCode Coverage](https://img.shields.io/scrutinizer/coverage/g/asminog/yii2-sentry/master)](https://scrutinizer-ci.com/g/asminog/yii2-sentry/)
 [![License](https://img.shields.io/github/license/asminog/yii2-sentry)](https://raw.githubusercontent.com/asminog/yii2-sentry/master/LICENSE)
 [![PHP from Packagist](https://img.shields.io/packagist/php-v/asminog/yii2-sentry)](https://packagist.org/packages/asminog/yii2-sentry)
+[![Code Intelligence Status](https://scrutinizer-ci.com/g/asminog/yii2-sentry/badges/code-intelligence.svg?b=master)](https://scrutinizer-ci.com/code-intelligence)
 
 ## Installation
 
