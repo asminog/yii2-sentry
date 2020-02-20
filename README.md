@@ -30,9 +30,9 @@ return [
                     'release' => 'my-project-name@2.3.12',
 //                    Options for sentry client
                     'options' => [],
-//                    Collect additional context from $_GLOBALS, default: ['_SESSION']. To switch off set false.
+//                    Collect additional context from $_GLOBALS, default: ['_SESSION', 'argv']. To switch off set false.
                     /* @see https://docs.sentry.io/enriching-error-data/context/?platform=php#extra-context
-                    'collectContext' => ['_SERVER', '_COOKIE', '_SESSION'],
+                    'collectContext' => ['_SERVER', '_COOKIE', '_SESSION', 'argv'],
                     // user attributes to collect, default: ['id', 'username', 'email']. To switch off set false.
                     /* @see https://docs.sentry.io/enriching-error-data/context/?platform=php#capturing-the-user */
                     'collectUserAttributes' => ['userId', 'userName', 'email'],

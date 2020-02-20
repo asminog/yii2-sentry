@@ -2,10 +2,9 @@
 
 namespace asminog\yii2sentry;
 
-use phpDocumentor\Reflection\Types\This;
 use Sentry\Severity;
 use Sentry\State\Scope;
-use \Throwable;
+use Throwable;
 use Yii;
 use yii\helpers\ArrayHelper;
 use yii\helpers\VarDumper;
@@ -51,7 +50,7 @@ class SentryTarget extends Target
     /**
      * @var array Allow to collect context automatically.
      */
-    public $collectContext = ['_SESSION'];
+    public $collectContext = ['_SESSION', 'argv'];
 
     /**
      * @var callable Callback function that can modify extra's array
@@ -64,9 +63,17 @@ class SentryTarget extends Target
      */
     public function init()
     {
-        $this->logVars = $this->collectContext;
+        $this->logVars = [];
 
-        init(array_merge($this->options, ['dsn' => $this->dsn], ['release' => ($this->release == 'auto' ? $this->getRelease() : $this->release)]));
+        init(
+            array_merge(
+                $this->options,
+                [
+                    'dsn' => $this->dsn,
+                    'release' => ($this->release == 'auto' ? $this->getRelease() : $this->release)
+                ]
+            )
+        );
 
         parent::init();
     }
@@ -82,16 +89,18 @@ class SentryTarget extends Target
 
     /**
      * @inheritdoc
+     * @throws \yii\base\InvalidConfigException
      */
     public function export()
     {
         foreach ($this->messages as $message) {
             list($message, $level, $category) = $message;
 
-            $this->setScopeLevel($level);
+            $this->clearScope();
             $this->setScopeUser();
-            $this->setScopeTags(['category' => $category]);
             $this->setExtraContext();
+            $this->setScopeLevel($level);
+            $this->setScopeTags(['category' => $category]);
 
             if ($message instanceof Throwable) {
                 $this->setScopeExtras($this->runExtraCallback($message, []));
@@ -99,25 +108,7 @@ class SentryTarget extends Target
                 continue;
             }
 
-            if (is_array($message)) {
-                if (isset($message['tags'])) {
-                    $this->setScopeTags($message['tags']);
-                    unset($message['tags']);
-                }
-
-                if (isset($message['extra'])) {
-                    $this->setScopeExtras($this->runExtraCallback($message, $message['extra']));
-                    unset($message['extra']);
-                }
-
-                if (count($message) == 1 and isset($message['msg'])) {
-                    $message = $message['msg'];
-                }
-            }
-
-            if (!is_string($message)) {
-                $message = VarDumper::dumpAsString($message);
-            }
+            $message = $this->convertMessage($message);
 
             captureMessage($message);
         }
@@ -132,83 +123,9 @@ class SentryTarget extends Target
     {
         $level = $this->convertLevel($level);
 
-        configureScope(function(Scope $scope) use ($level) : void {
+        configureScope(function (Scope $scope) use ($level) : void {
             $scope->setLevel($level);
         });
-    }
-
-    /**
-     * Set sentry user scope based on yii2 Yii::$app->user
-     */
-    private function setScopeUser()
-    {
-        if (!Yii::$app->request->isConsoleRequest and !empty($this->collectUserAttributes)) {
-            $attributes = ['id' => (Yii::$app->user ? Yii::$app->user->getId() : null)];
-            if (($user = Yii::$app->user->identity) !== null) {
-                foreach ($this->collectUserAttributes as $collectUserAttribute) {
-                    $attributes[$collectUserAttribute] = ArrayHelper::getValue($user, $collectUserAttribute);
-                }
-            }
-
-            configureScope(function(Scope $scope) use ($attributes): void {
-                $scope->setUser($attributes, true);
-            });
-        }
-    }
-
-    /**
-     * Set sentry scope tags
-     *
-     * @param array $tags
-     */
-    private function setScopeTags(array $tags)
-    {
-        configureScope(function(Scope $scope) use ($tags): void {
-            foreach ($tags as $key => $value) {
-                $scope->setTag((string)$key, (string)$value);
-            }
-        });
-    }
-
-    /**
-     * Set sentry scope extas
-     * @param array $extras
-     */
-    private function setScopeExtras(array $extras)
-    {
-        configureScope(function(Scope $scope) use ($extras): void {
-            foreach ($extras as $key => $value) {
-                $scope->setExtra((string)$key, $value);
-            }
-        });
-    }
-
-    /**
-     * Calls the extra user callback if it exists
-     *
-     * @param mixed $message log message from Logger::messages
-     * @param array $extra
-     * @return array
-     */
-    public function runExtraCallback($message, $extra = [])
-    {
-        if ($this->extraCallback !== false and is_callable($this->extraCallback)) {
-            $extra = call_user_func($this->extraCallback, $message, $extra);
-        }
-
-        if (!is_array($extra)) {
-            $extra['extra'] = VarDumper::dumpAsString($extra);
-        }
-
-        return $extra;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function getContextMessage()
-    {
-        return '';
     }
 
     /**
@@ -230,7 +147,40 @@ class SentryTarget extends Target
             case Logger::LEVEL_PROFILE_END:
                 return Severity::debug();
         }
+
         return Severity::fatal();
+    }
+
+    /**
+     * Set sentry user scope based on yii2 Yii::$app->user
+     * @throws \yii\base\InvalidConfigException
+     */
+    private function setScopeUser()
+    {
+        if (Yii::$app->get('user', false) !== null and !empty($this->collectUserAttributes)) {
+            $attributes = ['id' => (Yii::$app->user ? Yii::$app->user->getId() : null)];
+            if (($user = Yii::$app->user->identity) !== null) {
+                foreach ($this->collectUserAttributes as $collectUserAttribute) {
+                    $attributes[$collectUserAttribute] = ArrayHelper::getValue($user, $collectUserAttribute);
+                }
+            }
+
+            configureScope(function (Scope $scope) use ($attributes): void {
+                $scope->setUser($attributes, true);
+            });
+        }
+    }
+
+    /**
+     * Set sentry scope tags
+     *
+     * @param array $tags
+     */
+    private function setScopeTags(array $tags)
+    {
+        configureScope(function (Scope $scope) use ($tags): void {
+            $scope->setTags($tags);
+        });
     }
 
     /**
@@ -239,19 +189,81 @@ class SentryTarget extends Target
     private function setExtraContext()
     {
         if (!empty($this->collectContext)) {
-            $context = ArrayHelper::filter($GLOBALS, $this->collectContext);
-            foreach ($this->maskVars as $var) {
-                if (ArrayHelper::getValue($context, $var) !== null) {
-                    ArrayHelper::setValue($context, $var, '***');
-                }
-            }
-            $result = [];
-            foreach ($context as $key => $value) {
-                $result[ltrim($key, '_')] = VarDumper::dumpAsString($value);
-            }
+            $this->logVars = $this->collectContext;
+            $extraContext = $this->getContextMessage();
 
-            $this->setScopeExtras($result);
+            $this->setScopeExtras(['CONTEXT' => $extraContext]);
+            $this->logVars = [];
+        }
+    }
+
+    /**
+     * Set sentry scope extas
+     * @param array $extras
+     */
+    private function setScopeExtras(array $extras)
+    {
+        configureScope(function (Scope $scope) use ($extras): void {
+            $scope->setExtras($extras);
+        });
+    }
+
+    /**
+     * Calls the extra user callback if it exists
+     *
+     * @param mixed $message log message from Logger::messages
+     * @param array $extra
+     * @return array
+     */
+    protected function runExtraCallback($message, $extra = [])
+    {
+        if ($this->extraCallback !== false and is_callable($this->extraCallback)) {
+            $extra = call_user_func($this->extraCallback, $message, $extra);
         }
 
+        if (!is_array($extra)) {
+            $extra = ['extra' => VarDumper::dumpAsString($extra)];
+        }
+
+        return $extra;
+    }
+
+    /**
+     * Clear sentry scope for new message
+     */
+    private function clearScope()
+    {
+        configureScope(function (Scope $scope): void {
+            $scope->clear();
+        });
+    }
+
+    /**
+     * @param $message
+     * @return array|mixed|string
+     */
+    private function convertMessage($message)
+    {
+        if (is_array($message)) {
+            if (isset($message['tags'])) {
+                $this->setScopeTags($message['tags']);
+                unset($message['tags']);
+            }
+
+            if (isset($message['extra'])) {
+                $this->setScopeExtras($this->runExtraCallback($message, $message['extra']));
+                unset($message['extra']);
+            }
+
+            if (count($message) == 1 and isset($message['msg'])) {
+                $message = $message['msg'];
+            }
+        }
+
+        if (!is_string($message)) {
+            $message = VarDumper::dumpAsString($message);
+        }
+
+        return $message;
     }
 }
