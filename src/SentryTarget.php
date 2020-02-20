@@ -115,7 +115,7 @@ class SentryTarget extends Target
                 }
             }
 
-            if (!is_string($message)){
+            if (!is_string($message)) {
                 $message = VarDumper::dumpAsString($message);
             }
 
@@ -132,7 +132,7 @@ class SentryTarget extends Target
     {
         $level = $this->convertLevel($level);
 
-        configureScope(function (Scope $scope) use ($level) : void {
+        configureScope(function(Scope $scope) use ($level) : void {
             $scope->setLevel($level);
         });
     }
@@ -142,7 +142,7 @@ class SentryTarget extends Target
      */
     private function setScopeUser()
     {
-        if (!Yii::$app->request->isConsoleRequest and ! empty($this->collectUserAttributes)) {
+        if (!Yii::$app->request->isConsoleRequest and !empty($this->collectUserAttributes)) {
             $attributes = ['id' => (Yii::$app->user ? Yii::$app->user->getId() : null)];
             if (($user = Yii::$app->user->identity) !== null) {
                 foreach ($this->collectUserAttributes as $collectUserAttribute) {
@@ -150,7 +150,7 @@ class SentryTarget extends Target
                 }
             }
 
-            configureScope(function (Scope $scope) use ($attributes): void {
+            configureScope(function(Scope $scope) use ($attributes): void {
                 $scope->setUser($attributes, true);
             });
         }
@@ -163,7 +163,7 @@ class SentryTarget extends Target
      */
     private function setScopeTags(array $tags)
     {
-        configureScope(function (Scope $scope) use ($tags): void {
+        configureScope(function(Scope $scope) use ($tags): void {
             foreach ($tags as $key => $value) {
                 $scope->setTag((string)$key, (string)$value);
             }
@@ -176,7 +176,7 @@ class SentryTarget extends Target
      */
     private function setScopeExtras(array $extras)
     {
-        configureScope(function (Scope $scope) use ($extras): void {
+        configureScope(function(Scope $scope) use ($extras): void {
             foreach ($extras as $key => $value) {
                 $scope->setExtra((string)$key, $value);
             }
@@ -238,7 +238,7 @@ class SentryTarget extends Target
      */
     private function setExtraContext()
     {
-        if (! empty($this->collectContext)) {
+        if (!empty($this->collectContext)) {
             $context = ArrayHelper::filter($GLOBALS, $this->collectContext);
             foreach ($this->maskVars as $var) {
                 if (ArrayHelper::getValue($context, $var) !== null) {
