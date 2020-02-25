@@ -57,6 +57,16 @@ class SentryTarget extends Target
      */
     public $extraCallback;
 
+    const SENTRY_LEVELS = [
+        Logger::LEVEL_ERROR => Severity::ERROR,
+        Logger::LEVEL_WARNING => Severity::WARNING,
+        Logger::LEVEL_INFO => Severity::INFO,
+        Logger::LEVEL_TRACE => Severity::DEBUG,
+        Logger::LEVEL_PROFILE_BEGIN => Severity::DEBUG,
+        Logger::LEVEL_PROFILE_END => Severity::DEBUG,
+        Logger::LEVEL_PROFILE => Severity::DEBUG,
+    ];
+
 
     /**
      * @inheritdoc
@@ -135,20 +145,7 @@ class SentryTarget extends Target
      */
     private function convertLevel(int $level)
     {
-        switch ($level) {
-            case Logger::LEVEL_ERROR:
-                return Severity::error();
-            case Logger::LEVEL_WARNING:
-                return Severity::warning();
-            case Logger::LEVEL_INFO:
-                return Severity::info();
-            case Logger::LEVEL_TRACE:
-            case Logger::LEVEL_PROFILE_BEGIN:
-            case Logger::LEVEL_PROFILE_END:
-                return Severity::debug();
-        }
-
-        return Severity::fatal();
+        return isset(self::SENTRY_LEVELS[$level]) ? new Severity(self::SENTRY_LEVELS[$level]) : Severity::fatal();
     }
 
     /**
