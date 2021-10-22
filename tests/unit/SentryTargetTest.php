@@ -174,9 +174,9 @@ class SentryTargetTest extends Unit
         $method->invokeArgs($sentryTarget, []);
         $result = $this->getSentryScopeProperty('user');
 
-        codecept_debug(\Yii::$app->get('user') === null);
+        codecept_debug(\Yii::$app->get('user') !== null);
 
-        $this->assertNull($result);
+        $this->assertEquals(New UserContext(), $result);
 
         // user scope set test
         session_start();
