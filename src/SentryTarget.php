@@ -94,7 +94,7 @@ class SentryTarget extends Target
      */
     private function getRelease()
     {
-        return trim(exec('git log --pretty="%H" -n1 HEAD'));
+        return trim(exec('test git --version 2>&1 >/dev/null && git log --pretty="%H" -n1 HEAD || echo "trunk"'));
     }
 
     /**

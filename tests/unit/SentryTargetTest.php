@@ -7,11 +7,11 @@ use asminog\yii2sentry\SentryTarget;
 use ReflectionClass;
 use Sentry\Context\Context;
 use Sentry\Context\TagsContext;
-use Sentry\Context\UserContext;
 use Sentry\SentrySdk;
 use Sentry\Severity;
 use Sentry\State\Hub;
 use Sentry\State\Scope;
+use Sentry\UserDataBag;
 use yii\base\Component;
 use yii\base\NotSupportedException;
 use yii\helpers\VarDumper;
@@ -33,7 +33,8 @@ class SentryTargetTest extends Unit
     public function testInit()
     {
         $this->getSentryTarget('https://88e88888888888888eee888888eee8e8@sentry.io/1');
-        $this->assertEquals('https://sentry.io', SentrySdk::getCurrentHub()->getClient()->getOptions()->getDsn());
+        codecept_debug(SentrySdk::getCurrentHub()->getClient()->getOptions()->getDsn());
+        $this->assertEquals('https://88e88888888888888eee888888eee8e8@sentry.io/1', (string)SentrySdk::getCurrentHub()->getClient()->getOptions()->getDsn());
 
         $this->getSentryTarget('', 'v1.0.0', ['dsn' => 'http:://test.com', 'release' => 'v2.0.3', 'environment' => 'test']);
 
@@ -54,7 +55,7 @@ class SentryTargetTest extends Unit
         $result = $method->invokeArgs($sentryTarget, []);
         $this->assertNotEmpty($result);
         $this->assertEquals($result, SentrySdk::getCurrentHub()->getClient()->getOptions()->getRelease());
-        $expected = trim(exec('git log --pretty="%H" -n1 HEAD'));
+        $expected = trim(exec('test git --version 2>&1 >/dev/null && git log --pretty="%H" -n1 HEAD || echo "trunk"'));
         $this->assertEquals($expected, $result);
     }
 
@@ -164,7 +165,7 @@ class SentryTargetTest extends Unit
 
         $result = $this->getSentryScopeProperty('user');
 
-        $this->assertEquals(New UserContext(), $result);
+        $this->assertNull($result);
 
         \Yii::$app->user->setIdentity(UserIdentity::findIdentity('user1'));
 
@@ -176,7 +177,7 @@ class SentryTargetTest extends Unit
 
         codecept_debug(\Yii::$app->get('user') !== null);
 
-        $this->assertEquals(New UserContext(), $result);
+        $this->assertNull($result);
 
         // user scope set test
         session_start();
@@ -185,7 +186,7 @@ class SentryTargetTest extends Unit
 
         codecept_debug(\Yii::$app->get('user') !== null);
 
-        $this->assertEquals(New UserContext(['id' => 'user1']), $result);
+        $this->assertEquals(New UserDataBag('user1'), $result);
     }
 
     public function testSetScopeTags()
@@ -200,7 +201,7 @@ class SentryTargetTest extends Unit
 
         codecept_debug(\Yii::$app->user->identity);
 
-        $this->assertEquals(New TagsContext(['tag' => 'test']), $result);
+        $this->assertEquals(['tag' => 'test'], $result);
     }
 
     public function testSetExtraContext()
@@ -213,12 +214,12 @@ class SentryTargetTest extends Unit
 
         $result = $this->getSentryScopeProperty('extra');
 
-        $this->assertEquals(New Context(), $result);
+        $this->assertEquals([], $result);
 
         $sentryTarget = $this->getSentryTarget('', null, [], false, ['_SESSION']);
         $method->invokeArgs($sentryTarget, []);
         $result = $this->getSentryScopeProperty('extra');
-        $this->assertEquals(New Context(['CONTEXT' => '$_SESSION = []']), $result);
+        $this->assertEquals(['CONTEXT' => '$_SESSION = []'], $result);
     }
 
     public function testClearScope()
@@ -230,23 +231,23 @@ class SentryTargetTest extends Unit
         $method->invokeArgs($sentryTarget, [['tag' => 'test']]);
 
         $tags = $this->getSentryScopeProperty('tags');
-        $this->assertNotEquals(New TagsContext(), $tags);
+        $this->assertNotEquals([], $tags);
 
         $method = $class->getMethod('setScopeExtras');
         $method->setAccessible(true);
         $method->invokeArgs($sentryTarget, [['extra' => 'test']]);
 
         $extras = $this->getSentryScopeProperty('extra');
-        $this->assertNotEquals(New Context(), $tags);
+        $this->assertNotEquals([], $extras);
 
         $method = $class->getMethod('clearScope');
         $method->setAccessible(true);
         $method->invokeArgs($sentryTarget, []);
 
         $tags = $this->getSentryScopeProperty('tags');
-        $this->assertEquals(New TagsContext(), $tags);
+        $this->assertEquals([], $tags);
         $extras = $this->getSentryScopeProperty('extra');
-        $this->assertEquals(New Context(), $extras);
+        $this->assertEquals([], $extras);
     }
 
     public function testConvertMessage()
@@ -259,8 +260,8 @@ class SentryTargetTest extends Unit
         $result = $method->invokeArgs($sentryTarget, [['msg' => 'Test message', 'tags' => ['tag' => 'test'], 'extra' => ['test' => 'data']]]);
 
         $this->assertEquals('Test message', $result);
-        $this->assertEquals(new Context(['test' => 'data']), $this->getSentryScopeProperty('extra'));
-        $this->assertEquals(new TagsContext(['tag' => 'test']), $this->getSentryScopeProperty('tags'));
+        $this->assertEquals(['test' => 'data'], $this->getSentryScopeProperty('extra'));
+        $this->assertEquals(['tag' => 'test'], $this->getSentryScopeProperty('tags'));
 
         $result = $method->invokeArgs($sentryTarget, [['test' => 'value']]);
 
