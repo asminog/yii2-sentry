@@ -1,7 +1,7 @@
 # [Sentry](https://sentry.io) logger for Yii2
 
 [![Latest Stable Version](https://img.shields.io/packagist/v/asminog/yii2-sentry.svg)](https://packagist.org/packages/asminog/yii2-sentry)
-[![Build Status](https://github.com/asminog/yii2-sentry/workflows/php/badge.svg)](https://github.com/asminog/yii2-sentry/actions)
+[![Test](https://github.com/asminog/yii2-sentry/actions/workflows/php.yml/badge.svg)](https://github.com/asminog/yii2-sentry/actions/workflows/php.yml)
 [![License](https://img.shields.io/github/license/asminog/yii2-sentry)](https://raw.githubusercontent.com/asminog/yii2-sentry/master/LICENSE)
 [![PHP from Packagist](https://img.shields.io/packagist/php-v/asminog/yii2-sentry)](https://packagist.org/packages/asminog/yii2-sentry)
 [![Code Intelligence Status](https://scrutinizer-ci.com/g/asminog/yii2-sentry/badges/code-intelligence.svg?b=master)](https://scrutinizer-ci.com/g/asminog/yii2-sentry/)
