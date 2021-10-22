@@ -9,7 +9,7 @@
   "type": "yii2-extension",
   "license": "MIT",
   "require": {
-    "php": ">=7.1",
+    "php": ">=7.2",
     "yiisoft/yii2": "^2.0",
     "sentry/sdk": "^3.0"
   },
