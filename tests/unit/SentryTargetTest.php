@@ -165,9 +165,21 @@ class SentryTargetTest extends Unit
         $result = $this->getSentryScopeProperty('user');
 
         $this->assertEquals(New UserContext(), $result);
-        // todo test with user
+
         \Yii::$app->user->setIdentity(UserIdentity::findIdentity('user1'));
+
         $sentryTarget = $this->getSentryTarget('', null, [], ['id']);
+
+        // user scope not set if session not started
+        $method->invokeArgs($sentryTarget, []);
+        $result = $this->getSentryScopeProperty('user');
+
+        codecept_debug(\Yii::$app->get('user') === null);
+
+        $this->assertNull($result);
+
+        // user scope set test
+        session_start();
         $method->invokeArgs($sentryTarget, []);
         $result = $this->getSentryScopeProperty('user');
 

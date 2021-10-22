@@ -154,8 +154,8 @@ class SentryTarget extends Target
      */
     private function setScopeUser()
     {
-        if (session_status() === PHP_SESSION_ACTIVE and Yii::$app->get('user', false) !== null and !empty($this->collectUserAttributes)) {
-            $attributes = ['id' => (Yii::$app->user ? Yii::$app->user->getId() : null)];
+        if (session_status() === PHP_SESSION_ACTIVE and Yii::$app->get('user', false) !== null and Yii::$app->user->getId() and !empty($this->collectUserAttributes)) {
+            $attributes = ['id' => Yii::$app->user->getId()];
             if (($user = Yii::$app->user->identity) !== null) {
                 foreach ($this->collectUserAttributes as $collectUserAttribute) {
                     $attributes[$collectUserAttribute] = ArrayHelper::getValue($user, $collectUserAttribute);
