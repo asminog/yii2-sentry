@@ -2,21 +2,19 @@
 
 namespace asminog\yii2sentry\tests\unit;
 
-use Codeception\Test\Unit;
 use asminog\yii2sentry\SentryTarget;
+use Codeception\Test\Unit;
 use ReflectionClass;
-use Sentry\Context\Context;
-use Sentry\Context\TagsContext;
+use ReflectionException;
 use Sentry\SentrySdk;
 use Sentry\Severity;
 use Sentry\State\Hub;
 use Sentry\State\Scope;
 use Sentry\UserDataBag;
-use yii\base\Component;
-use yii\base\NotSupportedException;
+use Yii;
+use yii\base\InvalidConfigException;
 use yii\helpers\VarDumper;
 use yii\log\Logger;
-use yii\web\IdentityInterface;
 use yii\web\NotFoundHttpException;
 
 /**
@@ -25,7 +23,7 @@ use yii\web\NotFoundHttpException;
 class SentryTargetTest extends Unit
 {
     /** @var array test messages */
-    protected $messages = [
+    protected array $messages = [
         ['test', Logger::LEVEL_INFO, 'test', 1481513561.197593, []],
 
     ];
@@ -46,6 +44,9 @@ class SentryTargetTest extends Unit
         $this->assertEquals('test', SentrySdk::getCurrentHub()->getClient()->getOptions()->getEnvironment());
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testGetRelease()
     {
         $class = new ReflectionClass(SentryTarget::class);
@@ -62,6 +63,7 @@ class SentryTargetTest extends Unit
     /**
      * Testing method getContextMessage()
      * - returns empty string ''
+     * @throws ReflectionException
      * @see SentryTarget::getContextMessage
      */
     public function testGetContextMessage()
@@ -79,6 +81,7 @@ class SentryTargetTest extends Unit
     /**
      * Testing method getLevelName()
      * - returns level name for each logger level
+     * @throws ReflectionException
      * @see SentryTarget::getLevelName
      */
     public function testConvertLevel()
@@ -120,6 +123,7 @@ class SentryTargetTest extends Unit
      * - Sentry::capture is called on collect([...], true)
      * - messages stack is cleaned on  collect([...], true)
      * - Sentry::capture is called on export()
+     * @throws InvalidConfigException
      * @see SentryTarget::export
      */
     public function testExport()
@@ -138,9 +142,12 @@ class SentryTargetTest extends Unit
         //add messages and test simple export() method
         $sentryTarget->collect($messages, false);
         $sentryTarget->export();
-        $this->assertEquals(count($messages), count($sentryTarget->messages));
+        $this->assertSameSize($messages, $sentryTarget->messages);
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testSetScopeLevel()
     {
         $class = new ReflectionClass(SentryTarget::class);
@@ -154,6 +161,10 @@ class SentryTargetTest extends Unit
         $this->assertEquals(Severity::error(), $result);
     }
 
+    /**
+     * @throws InvalidConfigException
+     * @throws ReflectionException
+     */
     public function testSetScopeUser()
     {
         $class = new ReflectionClass(SentryTarget::class);
@@ -167,15 +178,15 @@ class SentryTargetTest extends Unit
 
         $this->assertNull($result);
 
-        \Yii::$app->user->setIdentity(UserIdentity::findIdentity('user1'));
+        Yii::$app->user->setIdentity(UserIdentity::findIdentity('user1'));
 
-        $sentryTarget = $this->getSentryTarget('', null, [], ['id']);
+        $sentryTarget = $this->getSentryTarget('', 'v0.0.1', [], ['id']);
 
         // user scope not set if session not started
         $method->invokeArgs($sentryTarget, []);
         $result = $this->getSentryScopeProperty('user');
 
-        codecept_debug(\Yii::$app->get('user') !== null);
+        codecept_debug(Yii::$app->get('user') !== null);
 
         $this->assertNull($result);
 
@@ -184,11 +195,14 @@ class SentryTargetTest extends Unit
         $method->invokeArgs($sentryTarget, []);
         $result = $this->getSentryScopeProperty('user');
 
-        codecept_debug(\Yii::$app->get('user') !== null);
+        codecept_debug(Yii::$app->get('user') !== null);
 
         $this->assertEquals(New UserDataBag('user1'), $result);
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testSetScopeTags()
     {
         $class = new ReflectionClass(SentryTarget::class);
@@ -199,11 +213,14 @@ class SentryTargetTest extends Unit
 
         $result = $this->getSentryScopeProperty('tags');
 
-        codecept_debug(\Yii::$app->user->identity);
+        codecept_debug(Yii::$app->user->identity);
 
         $this->assertEquals(['tag' => 'test'], $result);
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testSetExtraContext()
     {
         $class = new ReflectionClass(SentryTarget::class);
@@ -216,12 +233,15 @@ class SentryTargetTest extends Unit
 
         $this->assertEquals([], $result);
 
-        $sentryTarget = $this->getSentryTarget('', null, [], false, ['_SESSION']);
+        $sentryTarget = $this->getSentryTarget('', 'auto', [], [], ['_SESSION']);
         $method->invokeArgs($sentryTarget, []);
         $result = $this->getSentryScopeProperty('extra');
         $this->assertEquals(['CONTEXT' => '$_SESSION = []'], $result);
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testClearScope()
     {
         $class = new ReflectionClass(SentryTarget::class);
@@ -250,6 +270,9 @@ class SentryTargetTest extends Unit
         $this->assertEquals([], $extras);
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testConvertMessage()
     {
         $class = new ReflectionClass(SentryTarget::class);
@@ -268,18 +291,21 @@ class SentryTargetTest extends Unit
         $this->assertEquals(VarDumper::dumpAsString(['test' => 'value']), $result);
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testRunExtraCallback()
     {
         $class = new ReflectionClass(SentryTarget::class);
         $method = $class->getMethod('runExtraCallBack');
         $method->setAccessible(true);
 
-        $sentryTarget = $this->getSentryTarget('', null, [], false, false, function($message, $extra) {$extra['Callback'] = true; return $extra;});
+        $sentryTarget = $this->getSentryTarget('', '', [], [], [], function($message, $extra) {$extra['Callback'] = true; return $extra;});
         $result = $method->invokeArgs($sentryTarget, ['Message', []]);
 
         $this->assertEquals(['Callback' => true], $result);
 
-        $sentryTarget = $this->getSentryTarget('', null, [], false, false, function($message, $extra) {return 'extra';});
+        $sentryTarget = $this->getSentryTarget('', '', [], [], [], function() {return 'extra';});
         $result = $method->invokeArgs($sentryTarget, ['Message', []]);
 
         $this->assertEquals(['extra' => VarDumper::dumpAsString('extra')], $result);
@@ -288,15 +314,15 @@ class SentryTargetTest extends Unit
     /**
      * Returns configured SentryTarget object
      *
-     * @param null $dsn
-     * @param null $release
+     * @param string $dsn
+     * @param string $release
      * @param array $options
-     * @param bool $collectUserAttributes
-     * @param bool $collectContext
-     * @param null $extraCallback
+     * @param array $collectUserAttributes
+     * @param array $collectContext
+     * @param ?callable $extraCallback
      * @return SentryTarget
      */
-    protected function getSentryTarget($dsn = null, $release = null, $options = [], $collectUserAttributes = false, $collectContext = false, $extraCallback = null)
+    protected function getSentryTarget(string $dsn = '', string $release = 'v0.0.1', array $options = [], array $collectUserAttributes = [], array $collectContext = [], callable $extraCallback = null): SentryTarget
     {
         return new SentryTarget([
             'dsn' => $dsn,
@@ -310,7 +336,7 @@ class SentryTargetTest extends Unit
 
     /**
      * @return mixed
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function getSentryScopeProperty($name)
     {
@@ -327,62 +353,5 @@ class SentryTargetTest extends Unit
         $property->setAccessible(true);
         $this->assertNotEmpty($scope);
         return $property->getValue($scope);
-    }
-
-
-}
-
-class UserIdentity extends Component implements IdentityInterface
-{
-    private static $ids = [
-        'user1' => ['username' => 'User First', 'email' => 'first@user.com'],
-        'user2' => ['username' => 'Second First', 'email' => 'second@user.com', 'sex' => 'male'],
-    ];
-
-    private $_id;
-
-    public $username;
-    public $email;
-    public $sex;
-
-    /**
-     * @param int|string $id
-     * @return IdentityInterface|static|null
-     */
-    public static function findIdentity($id)
-    {
-        if (in_array($id, array_keys(static::$ids))) {
-            $identity = new static(static::$ids[$id]);
-            $identity->_id = $id;
-            return $identity;
-        }
-
-        return null;
-    }
-
-    /**
-     * @param mixed $token
-     * @param null $type
-     * @return void|IdentityInterface|null
-     * @throws NotSupportedException
-     */
-    public static function findIdentityByAccessToken($token, $type = null)
-    {
-        throw new NotSupportedException();
-    }
-
-    public function getId()
-    {
-        return $this->_id;
-    }
-
-    public function getAuthKey()
-    {
-        return 'ABCD1234';
-    }
-
-    public function validateAuthKey($authKey)
-    {
-        return $authKey === 'ABCD1234';
     }
 }

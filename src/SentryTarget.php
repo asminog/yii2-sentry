@@ -2,10 +2,12 @@
 
 namespace asminog\yii2sentry;
 
+use Exception;
 use Sentry\Severity;
 use Sentry\State\Scope;
 use Throwable;
 use Yii;
+use yii\base\InvalidConfigException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\VarDumper;
 use yii\log\Logger;
@@ -30,27 +32,27 @@ class SentryTarget extends Target
     /**
      * @var string DNS for sentry.
      */
-    public $dsn;
+    public string $dsn;
 
     /**
      * @var string Release for sentry.
      */
-    public $release;
+    public string $release = 'auto';
 
     /**
      * @var array Options for sentry.
      */
-    public $options = [];
+    public array $options = [];
 
     /**
      * @var array UserIdentity attributes for user context.
      */
-    public $collectUserAttributes = ['id', 'username', 'email'];
+    public array $collectUserAttributes = ['id', 'username', 'email'];
 
     /**
      * @var array Allow to collect context automatically.
      */
-    public $collectContext = ['_SESSION', 'argv'];
+    public array $collectContext = ['_SESSION', 'argv'];
 
     /**
      * @var callable Callback function that can modify extra's array
@@ -92,19 +94,19 @@ class SentryTarget extends Target
      * Get release based on git information
      * @return string
      */
-    private function getRelease()
+    private function getRelease(): string
     {
         return trim(exec('test git --version 2>&1 >/dev/null && git log --pretty="%H" -n1 HEAD || echo "trunk"'));
     }
 
     /**
      * @inheritdoc
-     * @throws \yii\base\InvalidConfigException
+     * @throws InvalidConfigException
      */
     public function export()
     {
         foreach ($this->messages as $message) {
-            list($message, $level, $category) = $message;
+            [$message, $level, $category] = $message;
 
             $this->clearScope();
             $this->setScopeUser();
@@ -113,7 +115,7 @@ class SentryTarget extends Target
             $this->setScopeTags(['category' => $category]);
 
             if ($message instanceof Throwable) {
-                $this->setScopeExtras($this->runExtraCallback($message, []));
+                $this->setScopeExtras($this->runExtraCallback($message));
                 captureException($message);
                 continue;
             }
@@ -143,14 +145,15 @@ class SentryTarget extends Target
      * @param int $level
      * @return Severity
      */
-    private function convertLevel(int $level)
+    private function convertLevel(int $level): Severity
     {
         return isset(self::SENTRY_LEVELS[$level]) ? new Severity(self::SENTRY_LEVELS[$level]) : Severity::fatal();
     }
 
     /**
      * Set sentry user scope based on yii2 Yii::$app->user
-     * @throws \yii\base\InvalidConfigException
+     * @throws InvalidConfigException
+     * @throws Exception
      */
     private function setScopeUser()
     {
@@ -163,7 +166,7 @@ class SentryTarget extends Target
             }
 
             configureScope(function (Scope $scope) use ($attributes): void {
-                $scope->setUser($attributes, true);
+                $scope->setUser($attributes);
             });
         }
     }
@@ -195,7 +198,7 @@ class SentryTarget extends Target
     }
 
     /**
-     * Set sentry scope extas
+     * Set sentry scope extras
      * @param array $extras
      */
     private function setScopeExtras(array $extras)
@@ -212,9 +215,9 @@ class SentryTarget extends Target
      * @param array $extra
      * @return array
      */
-    protected function runExtraCallback($message, $extra = [])
+    protected function runExtraCallback($message, array $extra = []): array
     {
-        if ($this->extraCallback !== false and is_callable($this->extraCallback)) {
+        if ($this->extraCallback and is_callable($this->extraCallback)) {
             $extra = call_user_func($this->extraCallback, $message, $extra);
         }
 
@@ -237,9 +240,9 @@ class SentryTarget extends Target
 
     /**
      * @param $message
-     * @return array|mixed|string
+     * @return string
      */
-    private function convertMessage($message)
+    private function convertMessage($message): string
     {
         if (is_array($message)) {
             if (isset($message['tags'])) {
